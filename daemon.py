@@ -37,7 +37,9 @@ class DeviceHiveHandler(Handler):
     _device = None
     _surgery_meta = None
     _payload = None
-    _instruments_in_use = None
+    instruments_in_use = None
+    op_instr = None
+
 
     # def __init__(self):
     #     self.instruments_in_use = None
@@ -49,16 +51,21 @@ class DeviceHiveHandler(Handler):
     
 
     def send(self, data):
-        if data["type"] == "start":
-            self._surgery_meta = data["data"]
-            return
+        print("BEFORE: ", data)
 
+        data, self.op_instr = format_notification(data, self.instruments_in_use)
+        # if data["type"] == "start":
+        #     self._surgery_meta = data["data"]
+        #     return
+        print("AFTER: ", self.op_instr)
         data = {
             "meta": self._surgery_meta,
             "data": data
         }
-        print("NFDJKF:NDKFNDK:FN:")
-        print(data['data']["predictions"]["AR-10000"])
+        # print("IN USE: ", self.instruments_in_use)
+        # print("ON TABLE: ", data)
+        # print("NFDJKF:NDKFNDK:FN:")
+        # print(data['data']["predictions"]["AR-10000"])
         if isinstance(data, str):
             notification = data
         # else:
@@ -70,13 +77,19 @@ class DeviceHiveHandler(Handler):
             #     print("STRING")
             #     notification = str(data)
 
-        print("note: ", type(data))
-        print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
+        # print("note: ", type(data))
+        # print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
         # {"0":{"1":1}}
         self._device.send_notification("instruments", {"notification":data})
 
     def set_instr(self, instruments_in_use):
-        self._instruments_in_use = instruments_in_use
+        self.instruments_in_use = instruments_in_use
+
+    def get_op_instr(self):
+        return self.op_instr
+
+    def set_meta(self, meta):
+        self._surgery_meta = meta
 
 
 class Daemon(Server):
@@ -92,7 +105,7 @@ class Daemon(Server):
         self._detect_frame_data_id = 0
         self._cam_thread = threading.Thread(target=self._cam_loop, name='cam')
         self._cam_thread.setDaemon(True)
-        self.op_instr = None
+        # self.op_instr = None
 
     def _on_startup(self):
         self._cam_thread.start()
@@ -161,7 +174,7 @@ class Daemon(Server):
                 if predictions:
                     formatted = format_predictions(predictions)
                     logger.info('Predictions: {}'.format(formatted))
-                    self._send_dh(format_notification(predictions))
+                    self._send_dh(predictions)
 
                 frame_num += 1
 
@@ -170,19 +183,21 @@ class Daemon(Server):
             model.close()
 
     def _send_dh(self, data):
+        
         # set information about the surgery
         if not self.dh_status.connected:
             logger.error('Devicehive is not connected')
             return
 
-        self.op_instr = data
+        # self.op_instr = data
+        # print("OP_INSTR: ", op_instr)
         self.deviceHive.handler.send(data)
 
     def get_frame(self):
         return self._detect_frame_data, self._detect_frame_data_id
 
-    def get_op_instr(self):
-        return self.op_instr
+    # def get_op_instr(self):
+    #     return self.op_instr
 
     
 
@@ -289,6 +304,13 @@ class Widget(Daemon):
         self.instruments_in_use_box = Text(self.window, height=6, width=20)
         self.instruments_in_use_box.grid(column=0, row=10)
         self.instruments_in_use = None
+
+        self.oper_lbl = Label(self.window, text="Instrument In Dr's Hand: ")
+        self.oper_lbl.grid(column=1, row=9)
+        self.operating_instruments_box = Text(self.window, height=6, width=20)
+        self.operating_instruments_box.grid(column=1, row=10)
+        
+
    
 
     def startClicked(self):
@@ -299,16 +321,14 @@ class Widget(Daemon):
         self.procedure_field = self.patient_txt.get()
         self.instrument_packets_field = self.instruments_txt.get()
 
-        Initial = {
-            "type": "start",
-            "data": {
-                "hospital": self.hospital_field,
-                "doctor": self.doctor_field,
-                "patient": self.patient_field,
-                "procedure": self.procedure_field,
-                "packets": self.instrument_packets_field
-            }
+        meta = {
+            "hospital": self.hospital_field,
+            "doctor": self.doctor_field,
+            "patient": self.patient_field,
+            "procedure": self.procedure_field,
+            "packets": self.instrument_packets_field
         }
+    
 
         self.stop_btn["state"] = ACTIVE
         self.start_btn["state"] = DISABLED
@@ -320,14 +340,21 @@ class Widget(Daemon):
             # Wait till DH connection is ready
             time.sleep(.001)
 
+
         self.server.deviceHive.handler.set_instr(self.instruments_in_use)
-        self.server.deviceHive.handler.send(Initial)
+        self.server.deviceHive.handler.set_meta(meta)
         
         while self.server.dh_status.connected:
             # Wait till DH connection is ready
-            time.sleep(0.500)
-            self.op_instr = self.server.get_op_instr()
+            time.sleep(1)
+            self.op_instr = self.server.deviceHive.handler.get_op_instr()
             print("GREAT: ", self.op_instr)
+            try:
+                self.operating_instruments_box.delete('1.0', END)
+                for instrument in self.op_instr:
+                    self.operating_instruments_box.insert(END, instrument + '\n')
+            except:
+                print("waiting for operating instrument inference")
 
     def stopClicked(self):
         self.stop_btn["state"] = DISABLED
