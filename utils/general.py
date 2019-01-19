@@ -36,8 +36,20 @@ def generate_colors(n, max_value=255):
 def format_predictions(predicts):
     return ', '.join('{class_name}: {score:.2f}'.format(**p) for p in predicts)
 
+def format_data(surgery_meta, op_instr, confidence, timesplits):
+    result = {
+        "type": "frame",
+        "meta": surgery_meta,
+        "instruments": op_instr,
+        "confidence": confidence,
+        "percents": timesplits
+    }
 
-def format_notification(predicts, instruments_in_use):
+    return result
+
+
+
+def extrap_instrument(predicts, instruments_in_use):
     # result = {}
     # for instrument in instruments_in_use:
     #     result[instrument] = 0.0
@@ -69,12 +81,12 @@ def format_notification(predicts, instruments_in_use):
         #     print("An instrument that is not present was predicted")
         # result.append({key: p[key] for key in NOTIFICATION_KEYS})
         
-    result = {
-        "type": "frame",
-        "instruments": in_use,
-        "confidence": average_confidence
-    }
-    return result, in_use
+    # result = {
+    #     "type": "frame",
+    #     "instruments": in_use,
+    #     "confidence": average_confidence
+    # }
+    return average_confidence, in_use
 
 def format_person_prediction(predicts):
     confidence = 0.0

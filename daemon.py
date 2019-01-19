@@ -24,7 +24,7 @@ from devicehive_webconfig import Server, Handler
 
 from subprocedure_sequence import demo_instruments
 from models.yolo import Yolo2Model
-from utils.general import format_predictions, format_notification, format_person_prediction
+from utils.general import format_predictions, extrap_instrument, format_data, format_person_prediction
 from web.routes import routes
 from log_config import LOGGING
 
@@ -51,7 +51,7 @@ class calculator():
 class DeviceHiveHandler(Handler):
 
     _device = None
-    _surgery_meta = None
+    surgery_meta = None
     _payload = None
     instruments_in_use = None
     op_instr = None
@@ -79,19 +79,23 @@ class DeviceHiveHandler(Handler):
     def send(self, data):
         print("BEFORE: ", data)
 
-        data, self.op_instr = format_notification(data, self.instruments_in_use)
+        confidence, self.op_instr = extrap_instrument(data, self.instruments_in_use)
         # if data["type"] == "start":
-        #     self._surgery_meta = data["data"]
+        #     self.surgery_meta = data
         #     return
         print("AFTER: ", self.op_instr)
-        data = {
-            "meta": self._surgery_meta,
-            
-            "data": data
-        }
+        
         # "time_stamp": datetime.datetime.now().isoformat()
-        print("YUNK :", datetime.datetime.now().isoformat())
-        self.update_frame(data)
+        # print("YUNK :", datetime.datetime.now().isoformat())
+        self.update_frame(self.op_instr)
+
+        data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage)
+
+        # data = {
+        #     "meta": self.surgery_meta,
+            
+        #     "data": data
+        # }
 
         self._device.send_notification("instruments", {"notification":data})
 
@@ -105,7 +109,7 @@ class DeviceHiveHandler(Handler):
         return self.op_instr
 
     def set_meta(self, meta):
-        self._surgery_meta = meta
+        self.surgery_meta = meta
 
     # def __datetime(self, date_str):
     #     return datetime.datetime.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
@@ -126,8 +130,8 @@ class DeviceHiveHandler(Handler):
         print("TOTAL MINUTES: ", (self.total_seconds))
         self.last_time_stamp = current
 
-        print("FRAME: ", frame["data"]["instruments"])
-        for instrument in frame["data"]["instruments"]:
+        print("FRAME: ", frame)
+        for instrument in frame:
             try:
                 self.instruments_usage[instrument] += diff
                 self.instrument_seconds += diff
@@ -135,13 +139,17 @@ class DeviceHiveHandler(Handler):
                 print("Inferred Instrument that is not in use in the surgery")
 
         for key in self.instruments_usage:
+            print("INSTRUMENT: ", key)
+            print("time used: ", self.instruments_usage[key])
+            print(self.instrument_seconds)
             try:
-                self.timesplits[key] = self.instruments_usage[key] / self.total_seconds
+                self.timesplits[key] = self.instruments_usage[key] / self.instrument_seconds
             except:
                 print("no instruments used yet")
 
         print("BIG SHABANG: ", self.timesplits)
-
+        
+ 
 class Daemon(Server):
     encode_params = [cv2.IMWRITE_JPEG_QUALITY, cv2.COLOR_LUV2LBGR]
 
