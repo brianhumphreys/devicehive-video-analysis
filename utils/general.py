@@ -37,22 +37,42 @@ def format_predictions(predicts):
     return ', '.join('{class_name}: {score:.2f}'.format(**p) for p in predicts)
 
 
-def format_notification(predicts):
-    result = {
-        "AR-13970SRF": 0.0,
-        "AR-13975SR": 0.0,
-        "AR-10000": 0.0,
-    }
-    print("TEEEEST: ", predicts)
+def format_notification(predicts, instruments_in_use):
+    # result = {}
+    # for instrument in instruments_in_use:
+    #     result[instrument] = 0.0
+    
+    # print("RESULTTTTT: ", result)
+    print("IN USE: ", instruments_in_use)
+    print("ON TABLE: ", predicts)
+    instruments_on_table = []
+    number_on_table = 0
+    sum_confidence = 0.0
     for p in predicts:
-        result[p["class_name"]] = float(p["score"])
+        if (float(p["score"])>0.15):
+            sum_confidence += float(p["score"])
+            number_on_table += 1
+            instruments_on_table.append(p["class_name"])
+    average_confidence = sum_confidence / number_on_table
+
+    in_use = []
+    for instrument in instruments_in_use:
+        if instrument not in instruments_on_table:
+            in_use.append(instrument)
+
+
+        # try:
+        #     result[p["class_name"]] = float(p["score"])
+        # except:
+        #     print("An instrument that is not present was predicted")
         # result.append({key: p[key] for key in NOTIFICATION_KEYS})
         
     result = {
         "type": "frame",
-        "predictions": result
+        "instruments": in_use,
+        "confidence": average_confidence
     }
-    return result
+    return result, in_use
 
 def format_person_prediction(predicts):
     confidence = 0.0
