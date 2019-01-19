@@ -56,11 +56,13 @@ def format_notification(predicts, instruments_in_use):
     average_confidence = sum_confidence / number_on_table
 
     in_use = []
-    for instrument in instruments_in_use:
-        if instrument not in instruments_on_table:
-            in_use.append(instrument)
+    try:
+        for instrument in instruments_in_use:
+            if instrument not in instruments_on_table:
+                in_use.append(instrument)
 
-
+    except:
+        print('No instruments Registered for Surgery')
         # try:
         #     result[p["class_name"]] = float(p["score"])
         # except:

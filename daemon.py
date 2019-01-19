@@ -17,6 +17,7 @@ import cv2
 import json
 import time
 import threading
+import datetime
 import logging.config
 from Tkinter import *
 from devicehive_webconfig import Server, Handler
@@ -31,6 +32,22 @@ logging.config.dictConfig(LOGGING)
 
 logger = logging.getLogger('detector')
 
+class calculator():
+    def __init__(self):
+        self.last_time_stamp = None
+        self.instrument_minutes = 0.0
+        self.instruments_used_to_present = {}
+        self.timesplits = {}
+        self.delta = None
+
+    def update(self, frame):
+        current = datetime.datetime.now().isoformat()
+        
+        if (self.last_time_stamp != None):
+            self.delta = current - self.last_time_stamp
+            self.delta.total_minutes()
+            print("TOTAL MINUTES: ", self.delta)
+
 
 class DeviceHiveHandler(Handler):
 
@@ -40,11 +57,19 @@ class DeviceHiveHandler(Handler):
     instruments_in_use = None
     op_instr = None
 
+    last_time_stamp = None
+    total_seconds = 0.0
+    instrument_seconds = 0.0
+    instruments_used_to_present = {}
+    timesplits = {}
+    delta = None
+
 
     # def __init__(self):
     #     self.instruments_in_use = None
 
     def handle_connect(self):
+        # self.calculator = calculator()
         self._device = self.api.put_device(self._device_id)
         super(DeviceHiveHandler, self).handle_connect()
 
@@ -60,14 +85,19 @@ class DeviceHiveHandler(Handler):
         print("AFTER: ", self.op_instr)
         data = {
             "meta": self._surgery_meta,
+            
             "data": data
         }
+        # "time_stamp": datetime.datetime.now().isoformat()
+        print("YUNK :", datetime.datetime.now().isoformat())
+        self.update_frame(data)
+
         # print("IN USE: ", self.instruments_in_use)
         # print("ON TABLE: ", data)
         # print("NFDJKF:NDKFNDK:FN:")
         # print(data['data']["predictions"]["AR-10000"])
-        if isinstance(data, str):
-            notification = data
+        # if isinstance(data, str):
+        #     notification = data
         # else:
             # notification = json.dumps(data, encoding='UTF-8')
             # try:
@@ -90,6 +120,22 @@ class DeviceHiveHandler(Handler):
 
     def set_meta(self, meta):
         self._surgery_meta = meta
+
+    # def __datetime(self, date_str):
+    #     return datetime.datetime.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
+
+    def update_frame(self, frame):
+        print("YEAR: ", datetime.time())
+        if self.last_time_stamp == None:
+            self.last_time_stamp = datetime.datetime.now()
+            return 
+
+        current = datetime.datetime.now()
+        print("TIME: ", current)
+        self.delta = current - self.last_time_stamp
+        self.total_seconds += self.delta
+        print("TOTAL MINUTES: ", (self.delta.seconds))
+        self.last_time_stamp = current
 
 
 class Daemon(Server):
