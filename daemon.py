@@ -83,6 +83,7 @@ class Daemon(Server):
         self._detect_frame_data_id = 0
         self._cam_thread = threading.Thread(target=self._cam_loop, name='cam')
         self._cam_thread.setDaemon(True)
+        self.op_instr = None
 
     def _on_startup(self):
         self._cam_thread.start()
@@ -165,18 +166,22 @@ class Daemon(Server):
             logger.error('Devicehive is not connected')
             return
 
-        
+        self.op_instr = data
         self.deviceHive.handler.send(data)
 
     def get_frame(self):
         return self._detect_frame_data, self._detect_frame_data_id
 
+    def get_op_instr(self):
+        return self.op_instr
 
-class Widget():
+
+class Widget(Daemon):
     
 
-    def __init__(self):
-        # self.server = None
+    def __init__(self, daemon):
+        self.server = daemon
+
 
         self.window = Tk()
         self.window.title("Assist-MD Capture")
@@ -218,24 +223,6 @@ class Widget():
         self.instruments_txt = Entry(self.window,textvariable=v,width=20)
         self.instruments_txt.grid(column=1, row=4)
 
-        # self.demo1_lbl = Label(self.window, text="Instrument set 1: ")
-        # self.demo1_lbl.grid(column=0, row=6)
-        # self.var1 = IntVar()
-        # self.demo1_chk = Checkbutton(self.window, command=self.checkBoxClicked, variable=self.var1)
-        # self.demo1_chk.grid(column=1, row=6)
-
-        # self.demo2_lbl = Label(self.window, text="Instrument set 2: ")
-        # self.demo2_lbl.grid(column=0, row=7)
-        # self.var2 = IntVar()
-        # self.demo2_chk = Checkbutton(self.window, command=self.checkBoxClicked, text="male", variable=self.var2)
-        # self.demo2_chk.grid(column=1, row=7)
-
-        # self.demo3_lbl = Label(self.window, text="Instrument set 3: ")
-        # self.demo3_lbl.grid(column=0, row=8)
-        # self.var3 = IntVar()
-        # self.demo3_chk = Checkbutton(self.window, command=self.checkBoxClicked, text="male", variable=self.var3)
-        # self.demo3_chk.grid(column=1, row=8)
-
         self.radiovar = IntVar()
 
         self.demo1_lbl = Label(self.window, text="Instrument set 1: ")
@@ -267,8 +254,6 @@ class Widget():
             value=3,
             command=self.checkBoxClicked)
         self.demo3_chk.grid(column=1, row=8)
-
-        
 
         self.startButtonState = ACTIVE
         self.stopButtonState = DISABLED
@@ -316,7 +301,7 @@ class Widget():
         self.stop_btn["state"] = ACTIVE
         self.start_btn["state"] = DISABLED
 
-        self.server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
+        # self.server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
         self.server.start()
 
         while not self.server.dh_status.connected:
@@ -325,6 +310,11 @@ class Widget():
 
         self.server.deviceHive.handler.send(Initial)
         
+        while self.server.dh_status.connected:
+            # Wait till DH connection is ready
+            time.sleep(0.500)
+            self.op_instr = self.server.get_op_instr()
+            print("GREAT: ", self.op_instr)
 
     def stopClicked(self):
         self.stop_btn["state"] = DISABLED
@@ -349,6 +339,7 @@ class Widget():
         self.window.mainloop()
 
 if __name__ == '__main__':
-    prog = Widget()
+    server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
+    prog = Widget(server)
     prog.create_widget()
     
