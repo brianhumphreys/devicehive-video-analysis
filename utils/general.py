@@ -37,22 +37,31 @@ def format_predictions(predicts):
     return ', '.join('{class_name}: {score:.2f}'.format(**p) for p in predicts)
 
 
-def format_notification(predicts):
-    result = {
-        "AR-13970SRF": 0.0,
-        "AR-13975SR": 0.0,
-        "AR-10000": 0.0,
-    }
-    print("TEEEEST: ", predicts)
-    for p in predicts:
-        result[p["class_name"]] = float(p["score"])
-        # result.append({key: p[key] for key in NOTIFICATION_KEYS})
+def format_notification(data, start=False):
+    print("UNFORMATED: ", data)
+    
+    # print("TEEEEST: ", data)
+    # Start is already formatted
+    if( not start):
+        instrument_conf = {
+            "AR-13970SRF": 0.0,
+            "AR-13975SR": 0.0,
+            "AR-10000": 0.0,
+        }
+        for p in data:
+            instrument_conf[p["class_name"]] = float(p["score"])
         
-    result = {
-        "type": "frame",
-        "predictions": result
-    }
-    return result
+        data = {
+            "type": "frame",
+            "predictions": instrument_conf
+        }
+    else:
+        data = {
+            "type": "start",
+            "meta": data
+        }
+
+    return data
 
 def format_person_prediction(predicts):
     confidence = 0.0

@@ -38,9 +38,7 @@ class DeviceHiveHandler(Handler):
     _surgery_meta = None
     _payload = None
     _instruments_in_use = None
-
-    # def __init__(self):
-    #     self.instruments_in_use = None
+    op_instr = None
 
     def handle_connect(self):
         self._device = self.api.put_device(self._device_id)
@@ -48,17 +46,21 @@ class DeviceHiveHandler(Handler):
 
     
 
-    def send(self, data):
+    def send(self, data, start=False):
+        data = format_notification(data, start)
         if data["type"] == "start":
-            self._surgery_meta = data["data"]
+            self._surgery_meta = data["meta"]
             return
+
+        print("DATAAAAAAA: ", data)
+        print("IN USSSESESESE: ", self._instruments_in_use)
 
         data = {
             "meta": self._surgery_meta,
             "data": data
         }
-        print("NFDJKF:NDKFNDK:FN:")
-        print(data['data']["predictions"]["AR-10000"])
+        # print("NFDJKF:NDKFNDK:FN:")
+        # print(data['data']["predictions"]["AR-10000"])
         if isinstance(data, str):
             notification = data
         # else:
@@ -70,13 +72,16 @@ class DeviceHiveHandler(Handler):
             #     print("STRING")
             #     notification = str(data)
 
-        print("note: ", type(data))
-        print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
+        # print("note: ", type(data))
+        # print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
         # {"0":{"1":1}}
         self._device.send_notification("instruments", {"notification":data})
 
     def set_instr(self, instruments_in_use):
         self._instruments_in_use = instruments_in_use
+
+    def get_op_instr(self):
+        return self.op_instr
 
 
 class Daemon(Server):
@@ -92,7 +97,7 @@ class Daemon(Server):
         self._detect_frame_data_id = 0
         self._cam_thread = threading.Thread(target=self._cam_loop, name='cam')
         self._cam_thread.setDaemon(True)
-        self.op_instr = None
+        # self.op_instr = None
 
     def _on_startup(self):
         self._cam_thread.start()
@@ -161,7 +166,7 @@ class Daemon(Server):
                 if predictions:
                     formatted = format_predictions(predictions)
                     logger.info('Predictions: {}'.format(formatted))
-                    self._send_dh(format_notification(predictions))
+                    self._send_dh(predictions)
 
                 frame_num += 1
 
@@ -171,6 +176,7 @@ class Daemon(Server):
 
     def _send_dh(self, data):
         # set information about the surgery
+        print("UNFORMATTEDDD DATA: ", data)
         if not self.dh_status.connected:
             logger.error('Devicehive is not connected')
             return
@@ -181,8 +187,8 @@ class Daemon(Server):
     def get_frame(self):
         return self._detect_frame_data, self._detect_frame_data_id
 
-    def get_op_instr(self):
-        return self.op_instr
+    # def get_op_instr(self):
+    #     return self.op_instr
 
     
 
@@ -299,15 +305,12 @@ class Widget(Daemon):
         self.procedure_field = self.patient_txt.get()
         self.instrument_packets_field = self.instruments_txt.get()
 
-        Initial = {
-            "type": "start",
-            "data": {
-                "hospital": self.hospital_field,
-                "doctor": self.doctor_field,
-                "patient": self.patient_field,
-                "procedure": self.procedure_field,
-                "packets": self.instrument_packets_field
-            }
+        data = {
+            "hospital": self.hospital_field,
+            "doctor": self.doctor_field,
+            "patient": self.patient_field,
+            "procedure": self.procedure_field,
+            "packets": self.instrument_packets_field
         }
 
         self.stop_btn["state"] = ACTIVE
@@ -321,12 +324,12 @@ class Widget(Daemon):
             time.sleep(.001)
 
         self.server.deviceHive.handler.set_instr(self.instruments_in_use)
-        self.server.deviceHive.handler.send(Initial)
+        self.server.deviceHive.handler.send(data, True)
         
         while self.server.dh_status.connected:
             # Wait till DH connection is ready
             time.sleep(0.500)
-            self.op_instr = self.server.get_op_instr()
+            self.op_instr = self.server.deviceHive.handler.get_op_instr()
             print("GREAT: ", self.op_instr)
 
     def stopClicked(self):
@@ -338,12 +341,12 @@ class Widget(Daemon):
 
     def checkBoxClicked(self):
         self.instruments_in_use = demo_instruments["instruments"][self.radiovar.get()-1]
-        print("The instruments are: ", self.instruments_in_use)
+        # print("The instruments are: ", self.instruments_in_use)
 
         self.instruments_in_use_box.delete('1.0', END)
         for instrument in self.instruments_in_use:
             self.instruments_in_use_box.insert(END, instrument + '\n')
-            print(instrument)
+            # print(instrument)
         
 
 
