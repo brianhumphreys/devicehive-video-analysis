@@ -35,8 +35,7 @@ logger = logging.getLogger('detector')
 class calculator():
     def __init__(self):
         self.last_time_stamp = None
-        self.instrument_minutes = 0.0
-        self.instruments_used_to_present = {}
+        self.instrument_minutes =age = {}
         self.timesplits = {}
         self.delta = None
 
@@ -60,7 +59,7 @@ class DeviceHiveHandler(Handler):
     last_time_stamp = None
     total_seconds = 0.0
     instrument_seconds = 0.0
-    instruments_used_to_present = {}
+    instruments_usage = {}
     timesplits = {}
     delta = None
 
@@ -70,6 +69,8 @@ class DeviceHiveHandler(Handler):
 
     def handle_connect(self):
         # self.calculator = calculator()
+        
+
         self._device = self.api.put_device(self._device_id)
         super(DeviceHiveHandler, self).handle_connect()
 
@@ -92,28 +93,13 @@ class DeviceHiveHandler(Handler):
         print("YUNK :", datetime.datetime.now().isoformat())
         self.update_frame(data)
 
-        # print("IN USE: ", self.instruments_in_use)
-        # print("ON TABLE: ", data)
-        # print("NFDJKF:NDKFNDK:FN:")
-        # print(data['data']["predictions"]["AR-10000"])
-        # if isinstance(data, str):
-        #     notification = data
-        # else:
-            # notification = json.dumps(data, encoding='UTF-8')
-            # try:
-            #     print("JSON")
-            #     notification = json.dumps(data)
-            # except TypeError:
-            #     print("STRING")
-            #     notification = str(data)
-
-        # print("note: ", type(data))
-        # print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
-        # {"0":{"1":1}}
         self._device.send_notification("instruments", {"notification":data})
 
     def set_instr(self, instruments_in_use):
         self.instruments_in_use = instruments_in_use
+
+        for instrument in self.instruments_in_use:
+            self.instruments_usage[instrument] = 0.0
 
     def get_op_instr(self):
         return self.op_instr
@@ -133,10 +119,28 @@ class DeviceHiveHandler(Handler):
         current = datetime.datetime.now()
         print("TIME: ", current)
         self.delta = current - self.last_time_stamp
-        self.total_seconds += self.delta
-        print("TOTAL MINUTES: ", (self.delta.seconds))
+        diff = self.delta.seconds
+        diff += (self.delta.microseconds /1e6)
+        self.total_seconds += diff
+        print(self.delta.microseconds)
+        print("TOTAL MINUTES: ", (self.total_seconds))
         self.last_time_stamp = current
 
+        print("FRAME: ", frame["data"]["instruments"])
+        for instrument in frame["data"]["instruments"]:
+            try:
+                self.instruments_usage[instrument] += diff
+                self.instrument_seconds += diff
+            except:
+                print("Inferred Instrument that is not in use in the surgery")
+
+        for key in self.instruments_usage:
+            try:
+                self.timesplits[key] = self.instruments_usage[key] / self.total_seconds
+            except:
+                print("no instruments used yet")
+
+        print("BIG SHABANG: ", self.timesplits)
 
 class Daemon(Server):
     encode_params = [cv2.IMWRITE_JPEG_QUALITY, cv2.COLOR_LUV2LBGR]
