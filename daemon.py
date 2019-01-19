@@ -37,10 +37,16 @@ class DeviceHiveHandler(Handler):
     _device = None
     _surgery_meta = None
     _payload = None
+    _instruments_in_use = None
+
+    # def __init__(self):
+    #     self.instruments_in_use = None
 
     def handle_connect(self):
         self._device = self.api.put_device(self._device_id)
         super(DeviceHiveHandler, self).handle_connect()
+
+    
 
     def send(self, data):
         if data["type"] == "start":
@@ -68,6 +74,9 @@ class DeviceHiveHandler(Handler):
         print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
         # {"0":{"1":1}}
         self._device.send_notification("instruments", {"notification":data})
+
+    def set_instr(self, instruments_in_use):
+        self._instruments_in_use = instruments_in_use
 
 
 class Daemon(Server):
@@ -174,6 +183,9 @@ class Daemon(Server):
 
     def get_op_instr(self):
         return self.op_instr
+
+    
+
 
 
 class Widget(Daemon):
@@ -308,6 +320,7 @@ class Widget(Daemon):
             # Wait till DH connection is ready
             time.sleep(.001)
 
+        self.server.deviceHive.handler.set_instr(self.instruments_in_use)
         self.server.deviceHive.handler.send(Initial)
         
         while self.server.dh_status.connected:
