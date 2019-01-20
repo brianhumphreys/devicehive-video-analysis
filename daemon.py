@@ -124,7 +124,7 @@ class DeviceHiveHandler(Handler):
         print("TIME: ", current)
         self.delta = current - self.last_time_stamp
         diff = self.delta.seconds
-        diff += (self.delta.microseconds /1e6)
+        diff += round((self.delta.microseconds /1e6),3)
         self.total_seconds += diff
         print(self.delta.microseconds)
         print("TOTAL MINUTES: ", (self.total_seconds))
@@ -368,9 +368,6 @@ class Widget(Daemon):
         self.operating_instruments_box = Text(self.window, height=6, width=20)
         self.operating_instruments_box.grid(column=1, row=10)
         
-
-   
-
     def startClicked(self):
         print("starting server")
         self.hospital_field = self.hospital_txt.get()
@@ -430,10 +427,7 @@ class Widget(Daemon):
             self.instruments_in_use_box.insert(END, instrument + '\n')
             print(instrument)
         
-
-
     def create_widget(self):
-    
         self.window.mainloop()
 
 if __name__ == '__main__':
