@@ -17,13 +17,14 @@ import cv2
 import json
 import time
 import threading
+import datetime
 import logging.config
 from Tkinter import *
 from devicehive_webconfig import Server, Handler
 
 from subprocedure_sequence import demo_instruments
 from models.yolo import Yolo2Model
-from utils.general import format_predictions, format_notification, format_person_prediction
+from utils.general import format_predictions, extrap_instrument, format_data, format_person_prediction
 from web.routes import routes
 from log_config import LOGGING
 
@@ -31,20 +32,45 @@ logging.config.dictConfig(LOGGING)
 
 logger = logging.getLogger('detector')
 
+class calculator():
+    def __init__(self):
+        self.last_time_stamp = None
+        self.instrument_minutes =age = {}
+        self.timesplits = {}
+        self.delta = None
+
+    def update(self, frame):
+        current = datetime.datetime.now().isoformat()
+        
+        if (self.last_time_stamp != None):
+            self.delta = current - self.last_time_stamp
+            self.delta.total_minutes()
+            print("TOTAL MINUTES: ", self.delta)
+
 
 class DeviceHiveHandler(Handler):
 
     _device = None
-    _surgery_meta = None
+    surgery_meta = None
     _payload = None
     instruments_in_use = None
     op_instr = None
+
+    last_time_stamp = None
+    total_seconds = 0.0
+    instrument_seconds = 0.0
+    instruments_usage = {}
+    timesplits = {}
+    delta = None
 
 
     # def __init__(self):
     #     self.instruments_in_use = None
 
     def handle_connect(self):
+        # self.calculator = calculator()
+        
+
         self._device = self.api.put_device(self._device_id)
         super(DeviceHiveHandler, self).handle_connect()
 
@@ -53,45 +79,77 @@ class DeviceHiveHandler(Handler):
     def send(self, data):
         print("BEFORE: ", data)
 
-        data, self.op_instr = format_notification(data, self.instruments_in_use)
+        confidence, self.op_instr = extrap_instrument(data, self.instruments_in_use)
         # if data["type"] == "start":
-        #     self._surgery_meta = data["data"]
+        #     self.surgery_meta = data
         #     return
         print("AFTER: ", self.op_instr)
-        data = {
-            "meta": self._surgery_meta,
-            "data": data
-        }
-        # print("IN USE: ", self.instruments_in_use)
-        # print("ON TABLE: ", data)
-        # print("NFDJKF:NDKFNDK:FN:")
-        # print(data['data']["predictions"]["AR-10000"])
-        if isinstance(data, str):
-            notification = data
-        # else:
-            # notification = json.dumps(data, encoding='UTF-8')
-            # try:
-            #     print("JSON")
-            #     notification = json.dumps(data)
-            # except TypeError:
-            #     print("STRING")
-            #     notification = str(data)
+        
+        # "time_stamp": datetime.datetime.now().isoformat()
+        # print("YUNK :", datetime.datetime.now().isoformat())
+        self.update_frame(self.op_instr)
 
-        # print("note: ", type(data))
-        # print("note data: ", type(data["data"]))# ["predictions"]["AR-10000"]
-        # {"0":{"1":1}}
+        data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage)
+
+        # data = {
+        #     "meta": self.surgery_meta,
+            
+        #     "data": data
+        # }
+
         self._device.send_notification("instruments", {"notification":data})
 
     def set_instr(self, instruments_in_use):
         self.instruments_in_use = instruments_in_use
 
+        for instrument in self.instruments_in_use:
+            self.instruments_usage[instrument] = 0.0
+
     def get_op_instr(self):
         return self.op_instr
 
     def set_meta(self, meta):
-        self._surgery_meta = meta
+        self.surgery_meta = meta
 
+    # def __datetime(self, date_str):
+    #     return datetime.datetime.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
 
+    def update_frame(self, frame):
+        print("YEAR: ", datetime.time())
+        if self.last_time_stamp == None:
+            self.last_time_stamp = datetime.datetime.now()
+            return 
+
+        current = datetime.datetime.now()
+        print("TIME: ", current)
+        self.delta = current - self.last_time_stamp
+        diff = self.delta.seconds
+        diff += round((self.delta.microseconds /1e6),3)
+        self.total_seconds += diff
+        print(self.delta.microseconds)
+        print("TOTAL MINUTES: ", (self.total_seconds))
+        self.last_time_stamp = current
+
+        print("FRAME: ", frame)
+        for instrument in frame:
+            try:
+                self.instruments_usage[instrument] += diff
+                self.instrument_seconds += diff
+            except:
+                print("Inferred Instrument that is not in use in the surgery")
+
+        for key in self.instruments_usage:
+            print("INSTRUMENT: ", key)
+            print("time used: ", self.instruments_usage[key])
+            print(self.instrument_seconds)
+            try:
+                self.timesplits[key] = self.instruments_usage[key] / self.instrument_seconds
+            except:
+                print("no instruments used yet")
+
+        print("BIG SHABANG: ", self.timesplits)
+        
+ 
 class Daemon(Server):
     encode_params = [cv2.IMWRITE_JPEG_QUALITY, cv2.COLOR_LUV2LBGR]
 
@@ -112,7 +170,7 @@ class Daemon(Server):
 
     def _cam_loop(self):
         logger.info('Start camera loop')
-        cam = cv2.VideoCapture(0)
+        cam = cv2.VideoCapture(1)
         if not cam.isOpened():
             raise IOError('Can\'t open "{}"'.format(0))
 
@@ -310,9 +368,6 @@ class Widget(Daemon):
         self.operating_instruments_box = Text(self.window, height=6, width=20)
         self.operating_instruments_box.grid(column=1, row=10)
         
-
-   
-
     def startClicked(self):
         print("starting server")
         self.hospital_field = self.hospital_txt.get()
@@ -372,10 +427,7 @@ class Widget(Daemon):
             self.instruments_in_use_box.insert(END, instrument + '\n')
             print(instrument)
         
-
-
     def create_widget(self):
-    
         self.window.mainloop()
 
 if __name__ == '__main__':
