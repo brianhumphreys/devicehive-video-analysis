@@ -36,13 +36,14 @@ def generate_colors(n, max_value=255):
 def format_predictions(predicts):
     return ', '.join('{class_name}: {score:.2f}'.format(**p) for p in predicts)
 
-def format_data(surgery_meta, op_instr, confidence, timesplits):
+def format_data(surgery_meta, op_instr, confidence, timesplits, sequence):
     result = {
         "type": "frame",
         "meta": surgery_meta,
         "instruments": op_instr,
         "confidence": confidence,
-        "percents": timesplits
+        "percents": timesplits,
+        "sequence": sequence
     }
 
     return result
