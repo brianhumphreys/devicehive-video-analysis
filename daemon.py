@@ -32,6 +32,65 @@ logging.config.dictConfig(LOGGING)
 
 logger = logging.getLogger('detector')
 
+
+
+class Sequencer():
+
+    def __init__(self):
+        self.last_instruments=None
+        self.sequence = []
+
+    def getSequence(self):
+        return self.sequence
+
+    def update(self, instruments_in_use, time_delta):
+        if len(self.sequence) == 0:
+            # segment = Segment(instruments_in_use, time_delta)
+            segment = {
+                "instruments": instruments_in_use,
+                "time": time_delta
+            }
+            self.last_instruments = instruments_in_use
+            self.sequence.append(segment)
+            return
+
+        print(self.sequence[-1])
+        updated_time = self.sequence[-1]["time"] + time_delta
+        self.sequence[-1]["time"] = updated_time
+        print(self.sequence[-1]["time"])
+
+        if self.last_instruments != instruments_in_use:
+            # segment = Segment(instruments_in_use, 0.0)
+            segment = {
+                "instruments": instruments_in_use,
+                "time": 0.0
+            }
+            self.last_instruments = instruments_in_use
+            self.sequence.append(segment)
+        return
+
+    def pruneSequence(self):
+        if len(self.sequence) <= 4:
+            return
+        # newSequence = []
+        removeList = []
+        for i in range(len(self.sequence)):
+            if i != len(self.sequence) - 1:
+                segment = self.sequence[i]
+                if segment["time"] < 5.0:
+                    removeList.append(segment)
+        for segment in removeList:
+            self.sequence.remove(segment)
+        return
+    
+
+
+    def printSequence(self):
+        print("Print Sequence: ", self.sequence)
+        return
+    
+
+
 class calculator():
     def __init__(self):
         self.last_time_stamp = None
@@ -62,7 +121,7 @@ class DeviceHiveHandler(Handler):
     instruments_usage = {}
     timesplits = {}
     delta = None
-
+    sequencer = Sequencer()
 
     # def __init__(self):
     #     self.instruments_in_use = None
@@ -83,13 +142,15 @@ class DeviceHiveHandler(Handler):
         # if data["type"] == "start":
         #     self.surgery_meta = data
         #     return
+        # sequencer.update()
         print("AFTER: ", self.op_instr)
         
         # "time_stamp": datetime.datetime.now().isoformat()
         # print("YUNK :", datetime.datetime.now().isoformat())
         self.update_frame(self.op_instr)
+        sequence = self.sequencer.getSequence()
 
-        data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage)
+        data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage, sequence)
 
         # data = {
         #     "meta": self.surgery_meta,
@@ -147,6 +208,11 @@ class DeviceHiveHandler(Handler):
             except:
                 print("no instruments used yet")
 
+
+        self.sequencer.update(frame, diff)
+        self.sequencer.pruneSequence()
+        print("BIGGER SHABINGER: ")
+        self.sequencer.printSequence()
         print("BIG SHABANG: ", self.timesplits)
         
  
@@ -156,6 +222,8 @@ class Daemon(Server):
     _detect_frame_data = None
     _detect_frame_data_id = None
     _cam_thread = None
+
+    # sequencer = Sequencer()
     
 
     def __init__(self, *args, **kwargs):
@@ -254,11 +322,7 @@ class Daemon(Server):
     def get_frame(self):
         return self._detect_frame_data, self._detect_frame_data_id
 
-    # def get_op_instr(self):
-    #     return self.op_instr
-
-    
-
+ 
 
 
 class Widget(Daemon):
