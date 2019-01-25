@@ -51,7 +51,7 @@ def format_data(surgery_meta, op_instr, confidence, timesplits, sequence):
         "instruments": op_instr,
         "confidence": confidence,
         "percents": timesplits,
-        "sequence": sequence
+        "sequence": sequenceDict
     }
 
     return result
