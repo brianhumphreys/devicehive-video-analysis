@@ -15,7 +15,7 @@
 
 import colorsys
 from six.moves.urllib.parse import urlparse
-
+from collections import OrderedDict
 
 GOLDEN_RATIO = 0.618033988749895
 NOTIFICATION_KEYS = ('class_name', 'score')
@@ -37,6 +37,14 @@ def format_predictions(predicts):
     return ', '.join('{class_name}: {score:.2f}'.format(**p) for p in predicts)
 
 def format_data(surgery_meta, op_instr, confidence, timesplits, sequence):
+    sequenceDict = OrderedDict()
+
+    for i in range(len(sequence)):
+        name = " ".join(sequence[i]["instruments"])
+        key = str(i) + ": " + name
+        sequenceDict[key] = sequence[i]["time"]
+
+    print("YAAAAAAAAAS DICT: ", sequenceDict)
     result = {
         "type": "frame",
         "meta": surgery_meta,

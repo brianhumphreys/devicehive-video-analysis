@@ -72,7 +72,8 @@ class Sequencer():
     def pruneSequence(self):
         if len(self.sequence) <= 4:
             return
-        newSequence = []
+        # newSequence = []
+        removeList = []
         for i in range(len(self.sequence)):
             if i != len(self.sequence) - 1:
                 segment = self.sequence[i]
