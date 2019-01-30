@@ -16,6 +16,7 @@
 import cv2
 import json
 import time
+import thread
 import threading
 import datetime
 import logging.config
@@ -138,25 +139,16 @@ class DeviceHiveHandler(Handler):
     def send(self, data):
         print("BEFORE: ", data)
 
-        confidence, self.op_instr = extrap_instrument(data, self.instruments_in_use)
-        # if data["type"] == "start":
-        #     self.surgery_meta = data
-        #     return
-        # sequencer.update()
-        print("AFTER: ", self.op_instr)
-        
-        # "time_stamp": datetime.datetime.now().isoformat()
-        # print("YUNK :", datetime.datetime.now().isoformat())
-        self.update_frame(self.op_instr)
-        sequence = self.sequencer.getSequence()
+        # print(data)
+        if(data['type'] == "frame"):
+            confidence, self.op_instr = extrap_instrument(data, self.instruments_in_use)
 
-        data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage, sequence)
-
-        # data = {
-        #     "meta": self.surgery_meta,
+            print("AFTER: ", self.op_instr)
             
-        #     "data": data
-        # }
+            self.update_frame(self.op_instr)
+            sequence = self.sequencer.getSequence()
+
+            data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage, sequence)
 
         self._device.send_notification("instruments", {"notification":data})
 
@@ -207,7 +199,6 @@ class DeviceHiveHandler(Handler):
                 self.timesplits[key] = self.instruments_usage[key] / self.instrument_seconds
             except:
                 print("no instruments used yet")
-
 
         self.sequencer.update(frame, diff)
         self.sequencer.pruneSequence()
@@ -452,8 +443,11 @@ class Widget(Daemon):
         self.stop_btn["state"] = ACTIVE
         self.start_btn["state"] = DISABLED
 
-        # self.server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
         self.server.start()
+        # self.server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
+        # self._server_thread = threading.Thread(target=self.server.start, name='run-server')
+        # self._server_thread.start()
+        # thread.start_new_thread( self.server.start() )
 
         while not self.server.dh_status.connected:
             # Wait till DH connection is ready
@@ -462,7 +456,10 @@ class Widget(Daemon):
 
         self.server.deviceHive.handler.set_instr(self.instruments_in_use)
         self.server.deviceHive.handler.set_meta(meta)
+        self._server_loop_thread = threading.Thread(target=self._server_loop, name='server-loop')
+        self._server_loop_thread.start()
         
+    def _server_loop(self):
         while self.server.dh_status.connected:
             # Wait till DH connection is ready
             time.sleep(1)
@@ -479,6 +476,7 @@ class Widget(Daemon):
         self.stop_btn["state"] = DISABLED
         self.start_btn["state"] = ACTIVE
         print('stop clicked')
+        self.server._send_dh({"type": "end"})
         self.server.stop()
         self.window.destroy()
 
@@ -496,6 +494,10 @@ class Widget(Daemon):
 
 if __name__ == '__main__':
     server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
+    
     prog = Widget(server)
     prog.create_widget()
+
+    # widget_thread = threading.Thread(target=prog.create_widget, name='run-ui')
+    # widget_thread.start()
     
