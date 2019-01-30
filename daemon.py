@@ -138,11 +138,12 @@ class DeviceHiveHandler(Handler):
 
     def send(self, data):
         print("BEFORE: ", data)
-
+        global dead
         # print(data)
-        if(data['type'] == "frame"):
+        if type(data)!=list:
+            self._device.send_notification("instruments", {"notification":data})
+        elif not dead:
             confidence, self.op_instr = extrap_instrument(data, self.instruments_in_use)
-
             print("AFTER: ", self.op_instr)
             
             self.update_frame(self.op_instr)
@@ -150,7 +151,7 @@ class DeviceHiveHandler(Handler):
 
             data = format_data(self.surgery_meta, self.op_instr, confidence, self.instruments_usage, sequence)
 
-        self._device.send_notification("instruments", {"notification":data})
+            self._device.send_notification("instruments", {"notification":data})
 
     def set_instr(self, instruments_in_use):
         self.instruments_in_use = instruments_in_use
@@ -242,8 +243,10 @@ class Daemon(Server):
         start_time = time.time()
         frame_num = 0
         fps = 0
+
+        global dead
         try:
-            while self.is_running:
+            while self.is_running and not dead:
                 ret, frame = cam.read()
 
                 if not ret:
@@ -296,14 +299,18 @@ class Daemon(Server):
                 frame_num += 1
 
         finally:
+            print("cam released")
             cam.release()
             model.close()
 
     def _send_dh(self, data):
-        
+        global dead
         # set information about the surgery
         if not self.dh_status.connected:
             logger.error('Devicehive is not connected')
+            return
+        if dead and type(data)==list:
+            print("Last frame not sent")
             return
 
         # self.op_instr = data
@@ -460,7 +467,9 @@ class Widget(Daemon):
         self._server_loop_thread.start()
         
     def _server_loop(self):
-        while self.server.dh_status.connected:
+        global dead 
+        
+        while self.server.dh_status.connected and not dead:
             # Wait till DH connection is ready
             time.sleep(1)
             self.op_instr = self.server.deviceHive.handler.get_op_instr()
@@ -473,10 +482,15 @@ class Widget(Daemon):
                 print("waiting for operating instrument inference")
 
     def stopClicked(self):
+        global dead 
+        dead = True
         self.stop_btn["state"] = DISABLED
         self.start_btn["state"] = ACTIVE
         print('stop clicked')
+        # time.sleep(1)
         self.server._send_dh({"type": "end"})
+        
+        print("FUCK OFF")
         self.server.stop()
         self.window.destroy()
 
@@ -493,6 +507,8 @@ class Widget(Daemon):
         self.window.mainloop()
 
 if __name__ == '__main__':
+    global dead
+    dead = False
     server = Daemon(DeviceHiveHandler, routes=routes, is_blocking=False)
     
     prog = Widget(server)
