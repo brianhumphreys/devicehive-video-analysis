@@ -40,8 +40,8 @@ def format_data(surgery_meta, op_instr, confidence, timesplits, sequence):
     sequenceDict = OrderedDict()
 
     for i in range(len(sequence)):
-        name = " ".join(sequence[i]["instruments"])
-        key = str(i) + ": " + name
+        name = "_".join(sequence[i]["instruments"])
+        key = name + "_" + str(i)
         sequenceDict[key] = sequence[i]["time"]
 
     print("YAAAAAAAAAS DICT: ", sequenceDict)

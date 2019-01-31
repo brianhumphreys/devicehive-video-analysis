@@ -230,7 +230,7 @@ class Daemon(Server):
 
     def _cam_loop(self):
         logger.info('Start camera loop')
-        cam = cv2.VideoCapture(0)
+        cam = cv2.VideoCapture(1)
         if not cam.isOpened():
             raise IOError('Can\'t open "{}"'.format(0))
 
@@ -334,8 +334,8 @@ class Widget(Daemon):
         self.window.title("Assist-MD Capture")
         self.window.geometry('500x400')
 
-        self.hospital_field = "Memorial Hospital"
-        self.doctor_field = "Dr. Humphreys"
+        self.hospital_field = "Saint Judes"
+        self.doctor_field = "Brian Humphreys"
         self.patient_field = "David Roster"
         self.procedure_field = "Appendectomy"
         self.instrument_packets_field = 1
@@ -487,7 +487,7 @@ class Widget(Daemon):
         self.stop_btn["state"] = DISABLED
         self.start_btn["state"] = ACTIVE
         print('stop clicked')
-        # time.sleep(1)
+        time.sleep(1)
         self.server._send_dh({"type": "end"})
         
         print("FUCK OFF")
