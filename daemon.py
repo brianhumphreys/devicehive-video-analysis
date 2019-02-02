@@ -337,7 +337,7 @@ class Widget(Daemon):
         self.hospital_field = "Saint Judes"
         self.doctor_field = "Brian Humphreys"
         self.patient_field = "David Roster"
-        self.procedure_field = "Appendectomy"
+        self.procedure_field = "Appendectomy2"
         self.instrument_packets_field = 1
 
         self.hospital_lbl = Label(self.window, text="Hospital Name: ")
@@ -435,7 +435,7 @@ class Widget(Daemon):
         self.hospital_field = self.hospital_txt.get()
         self.doctor_field = self.doctor_txt.get()
         self.patient_field = self.patient_txt.get()
-        self.procedure_field = self.patient_txt.get()
+        self.procedure_field = self.procedure_txt.get()
         self.instrument_packets_field = self.instruments_txt.get()
 
         meta = {
