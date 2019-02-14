@@ -1,0 +1,7 @@
+{
+    "url": "https://playground.devicehive.com/api/rest", 
+    "r_token": "eyJhbGciOiJIUzI1NiJ9.eyJwYXlsb2FkIjp7ImEiOlsyLDMsNCw1LDYsNyw4LDksMTAsMTEsMTIsMTUsMTYsMTddLCJlIjoxNTYzMzI4ODA4MDc5LCJ0IjowLCJ1IjozOTI2LCJuIjpbIjM4ODEiXSwiZHQiOlsiKiJdfX0.nYZb-Wwg4soORnR0FIEHmvMgPcmIaoqItYss-0I0t_E", 
+    "a_token": "eyJhbGciOiJIUzI1NiJ9.eyJwYXlsb2FkIjp7ImEiOlsyLDMsNCw1LDYsNyw4LDksMTAsMTEsMTIsMTUsMTYsMTddLCJlIjoxNTQ3NjA1ODA4MDczLCJ0IjoxLCJ1IjozOTI2LCJuIjpbIjM4ODEiXSwiZHQiOlsiKiJdfX0.egvNiVOdgaNmrGxSmS-XePimiZ9fclLal1ReqG6I8FQ", 
+    "r_tokendevice_id": "", 
+    "device_id": "brian-68278"
+}
