@@ -230,7 +230,7 @@ class Daemon(Server):
 
     def _cam_loop(self):
         logger.info('Start camera loop')
-        cam = cv2.VideoCapture(1)
+        cam = cv2.VideoCapture(0)
         if not cam.isOpened():
             raise IOError('Can\'t open "{}"'.format(0))
 
