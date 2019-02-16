@@ -230,6 +230,7 @@ class Daemon(Server):
 
     def _cam_loop(self):
         logger.info('Start camera loop')
+        # 0 is for external webcam
         cam = cv2.VideoCapture(0)
         if not cam.isOpened():
             raise IOError('Can\'t open "{}"'.format(0))
@@ -337,7 +338,7 @@ class Widget(Daemon):
         self.hospital_field = "Saint Judes"
         self.doctor_field = "Brian Humphreys"
         self.patient_field = "David Roster"
-        self.procedure_field = "Appendectomy2"
+        self.procedure_field = "Appendectomy5"
         self.instrument_packets_field = 1
 
         self.hospital_lbl = Label(self.window, text="Hospital Name: ")

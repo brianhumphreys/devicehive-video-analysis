@@ -34,15 +34,19 @@ def evaluate(_):
     cv2.namedWindow(win_name)
 
     video = FLAGS.video
-
+    print(video)
     if is_url(video):
         videoPafy = pafy.new(video)
         video = videoPafy.getbest(preftype="mp4").url
+        print(video)
 
     # cam = cv2.VideoCapture(video)
+    # 0 is for external webcam
     cam = cv2.VideoCapture(0)
+
     if not cam.isOpened():
         raise IOError('Can\'t open "{}"'.format(FLAGS.video))
+        # cam = cv2.VideoCapture(0)
 
     source_h = cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
     source_w = cam.get(cv2.CAP_PROP_FRAME_WIDTH)

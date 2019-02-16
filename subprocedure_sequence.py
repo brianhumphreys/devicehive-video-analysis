@@ -5,8 +5,8 @@ demo_instruments = {"instruments": [
         "AR13970SRF"
     ],
     [
-        "AR13970SRF",
-        "AR13975SR",
+        "AR8550TBT",
+        "AR13500",
         "AR10000"
     ],
     [
